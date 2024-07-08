@@ -2,12 +2,19 @@
 <html>
 <head>
     <title>Real-Time Audio Translation</title>
+    <link rel="stylesheet" href="popup.css" type="text/css">
 </head>
 <body>
-    <h1>Real-Time Audio Translation</h1>
-    <button id="recordButton">Start Recording</button>
-    <button id="stopButton" disabled>Stop Recording</button>
-    <p id="status"></p>
+    <h1 class="header">Real-Time Audio Translation</h1>
+    <div class="buttonContainer">
+        <button id="recordButton">Start Recording</button>
+        <button id="stopButton" disabled>Stop Recording</button>
+    </div>
+
+    <p class="extra" id="status"></p>
+    <div class="links">
+        <p id="GitHub">GitHub</p>
+    </div>
     <script src="socket.io.js"></script>
     <script src="popup.js"></script>
 </body>

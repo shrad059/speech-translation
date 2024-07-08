@@ -17,7 +17,7 @@ body {
   display: flex;
   align-items: center;
   padding-bottom: 15px;
-  border-bottom: 2px solid darkred;
+  border-bottom: 2px solid darkgreen;
   white-space: nowrap;
 }
 
@@ -56,6 +56,7 @@ li {
 
 .links p {
   color: blue;
+  font-weight: bold;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -65,21 +66,22 @@ li {
   justify-content: space-around;
 }
 
-.button {
-  display: none;
+
+button {
+  display: block;
   text-align: center;
   padding: 10px;
-  border: 2px solid darkred;
+  border: 2px solid darkgreen;
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  background-color: lavenderblush;
+  background-color: rgba(156, 200, 156, 0.718);
   border-radius: 5px;
 }
 
 .button:hover {
-  color: red;
-  background-color: darkred;
+  color: green;
+  background-color: darkgreen;
 }
 
 .notes {

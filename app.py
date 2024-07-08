@@ -1,8 +1,8 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_file
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import torch
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, MarianMTModel, MarianTokenizer, SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+from transformers import pipeline, MarianMTModel, MarianTokenizer, SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from pydub import AudioSegment
 import io
 import numpy as np
@@ -16,12 +16,15 @@ app.config['SECRET_KEY'] = 'secret!'
 CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Load the models
-processor = WhisperProcessor.from_pretrained("shrad059/whisper-small-hi")
-model = WhisperForConditionalGeneration.from_pretrained("shrad059/whisper-small-hi")
+# Initialize the Whisper pipeline
+pipe = pipeline(model="shrad059/whisper-small-hi")
+
+# Load translation models
 translation_model_name = "Helsinki-NLP/opus-mt-hi-en"
 translation_tokenizer = MarianTokenizer.from_pretrained(translation_model_name)
 translation_model = MarianMTModel.from_pretrained(translation_model_name)
+
+# Load TTS models
 tts_processor = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
 tts_model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
 tts_vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
@@ -40,42 +43,66 @@ def index():
 
 @socketio.on('audio_chunk')
 def handle_audio_chunk(data):
+    print("Received audio chunk")
     audio_buffer.append(data)
 
 @socketio.on('end_audio')
 def handle_end_audio():
     global audio_buffer
-    audio = AudioSegment.from_file(io.BytesIO(b''.join(audio_buffer)), format="webm")
-    audio.export("temp.wav", format="wav")
-    
-    transcription = transcribe("temp.wav")
-    translation = translate(transcription)
-    speech = synthesise(translation)
+    try:
+        print("Processing audio")
+        audio = AudioSegment.from_file(io.BytesIO(b''.join(audio_buffer)), format="webm")
+        audio.export("temp.wav", format="wav")
+        print("Exported temp.wav")
 
-    output = io.BytesIO()
-    sf.write(output, speech, 16000, format='wav')
-    output.seek(0)
-    
-    emit('translated_audio', {'data': output.read().decode('latin1')})
-    audio_buffer = []
+        # Transcribe and translate
+        translated_text = transcribe_and_translate("temp.wav")
+        print(f"Translation: {translated_text}")
+
+        # Synthesize speech
+        speech = synthesise(translated_text)
+        print("Synthesised speech")
+
+        # Create a BytesIO object and write the audio to it
+        audio_io = io.BytesIO()
+        sf.write(audio_io, speech, 16000, format='wav')
+        audio_io.seek(0)
+        print("Prepared audio data to send to client")
+
+        # Send the audio data to the client
+        emit('audio_data', {'data': audio_io.read().decode('latin1')})
+        print("Sent audio data to client")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        emit('error', {'message': str(e)})
+    finally:
+        audio_buffer = []
 
 def transcribe(audio_path):
-    audio, original_sampling_rate = sf.read(audio_path)
-    audio = librosa.resample(audio, orig_sr=original_sampling_rate, target_sr=16000)
-    
-    if isinstance(audio, tuple):
-        audio = audio[0]
+    print("Starting transcription")
+    try:
+        text = pipe(audio_path)["text"]
+        print("Transcription completed")
+        return text
+    except Exception as e:
+        print(f"Transcription error: {str(e)}")
+        raise
 
-    inputs = processor(audio, sampling_rate=16000, return_tensors="pt")
-    input_features = inputs.input_features
-    predicted_ids = model.generate(input_features)
-    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-    return transcription
+def transcribe_and_translate(audio_path):
+    hindi_text = transcribe(audio_path)
+    translated_text = translate_hindi_to_english(hindi_text)
+    return translated_text
 
-def translate(text):
-    translated = translation_model.generate(**translation_tokenizer(text, return_tensors="pt", padding=True))
-    translated_text = [translation_tokenizer.decode(t, skip_special_tokens=True) for t in translated]
-    return translated_text[0]
+def translate_hindi_to_english(text):
+    print("Starting translation")
+    try:
+        translated = translation_model.generate(**translation_tokenizer(text, return_tensors="pt", padding=True))
+        translated_text = [translation_tokenizer.decode(t, skip_special_tokens=True) for t in translated]
+        print("Translation completed")
+        return translated_text[0]
+    except Exception as e:
+        print(f"Translation error: {str(e)}")
+        raise
 
 def split_text(text, max_length=600):
     words = text.split()
@@ -89,7 +116,7 @@ def split_text(text, max_length=600):
             current_chunk = [word]
             current_length = len(word) + 1
         else:
-            current_chunk.append(word)
+            current_chunk.append(word);
             current_length += len(word) + 1
 
     if current_chunk:
@@ -98,17 +125,22 @@ def split_text(text, max_length=600):
     return chunks
 
 def synthesise(text):
-    chunks = split_text(text)
-    speech_list = []
+    print("Starting synthesis")
+    try:
+        chunks = split_text(text)
+        speech_list = []
 
-    for chunk in chunks:
-        inputs = tts_processor(text=chunk, return_tensors="pt")
-        speech = tts_model.generate_speech(
-            inputs["input_ids"].to(device), speaker_embeddings.to(device), vocoder=tts_vocoder
-        )
-        speech_list.append(speech.cpu().numpy())
-
-    return np.concatenate(speech_list)
+        for chunk in chunks:
+            inputs = tts_processor(text=chunk, return_tensors="pt")
+            speech = tts_model.generate_speech(
+                inputs["input_ids"].to(device), speaker_embeddings.to(device), vocoder=tts_vocoder
+            )
+            speech_list.append(speech.cpu().numpy())
+        print("Synthesis completed")
+        return np.concatenate(speech_list)
+    except Exception as e:
+        print(f"Synthesis error: {str(e)}")
+        raise
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
