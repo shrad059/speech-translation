@@ -12,7 +12,7 @@ Note: The current version only supports Hindi, as I was testing out with the tra
 
 ![stop]
 
-[capturing]: ./docs/stop.png
+[stop]: ./docs/stop.png
 
 
 ## Running locally
