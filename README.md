@@ -1,9 +1,12 @@
 # Multi-Lingual Speech Translation Chrome Extension
 
 
-This is a Chrome extension that allows users to capture any audio playing on the current tab, and translate it to the user's desired language. Completed translated audios can be processed by clicking on the Play Audio button.
+This is a Chrome extension that allows users to capture any audio playing on the current tab, and translate it to the user's desired language. Completed translated audios can be processed by clicking on the Play Audio button. The Whisper model was finetuned on the given language for better speech transcription accuracy.
+
 
 Note: The current version only supports Hindi, as I was testing out with the transcription accuracy using the whisper model. More languages to be added in the future version!
+
+
 
 ![start]
 
