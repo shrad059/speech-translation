@@ -8,11 +8,6 @@ Note: The current version only supports Hindi, as I was testing out with the tra
 
 
 
-![start]
-
-[start]: ./docs/start.png
-
-
 ![stop]
 
 [stop]: ./docs/stop.png
