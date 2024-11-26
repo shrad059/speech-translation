@@ -7,12 +7,6 @@ This is a Chrome extension that allows users to capture any audio playing on the
 Note: The current version only supports Hindi, as I was testing out with the transcription accuracy using the whisper model. More languages to be added in the future version!
 
 
-
-![stop]
-
-[stop]: ./docs/stop.png
-
-
 ## Running locally
 
 1. Clone the repository
